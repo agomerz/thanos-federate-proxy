@@ -73,19 +73,26 @@ jobs:
   go:
     name: go
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        go-version: [ '1.23' ]
-
     steps:
-      - uses: actions/checkout@v4
-      - name: Setup Go ${{ matrix.go-version }}
-        uses: actions/setup-go@v5
+      - name: Checkout
+        uses: actions/checkout@v2.3.4
+      - name: Unshallow
+        run: git fetch --prune --unshallow
+      - name: Set up Go
+        uses: actions/setup-go@v2
         with:
-          go-version: ${{ matrix.go-version }}
-      - name: Install dependencies
-        run: go get .
-      - name: Build
-        run: go build -v ./...
-      - name: Test with the Go CLI
-        run: go test          
+          go-version: 1.23
+      - name: Import GPG key
+        id: import_gpg
+        uses: Ferlab-Ste-Justine/ghaction-import-gpg@main
+        env:
+          GPG_PRIVATE_KEY: ${{ secrets.GPG_PRIVATE_KEY }}
+          PASSPHRASE: ${{ secrets.PASSPHRASE }}
+      - name: Run GoReleaser
+        uses: goreleaser/goreleaser-action@v2.7.0
+        with:
+          version: latest
+          args: release --rm-dist
+        env:
+          GPG_FINGERPRINT: ${{ steps.import_gpg.outputs.fingerprint }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}         
